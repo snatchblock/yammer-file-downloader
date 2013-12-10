@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Yammer - File Tools</title>
+		
+		<!-- Le Styles -->
+		<link href="assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+		<link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+		<link href="assets/custom/css/custom.btn.css" rel="stylesheet">
+		<!--[if IE 7]>
+		  <link rel="stylesheet" href="assets/font-awesome/css/font-awesome-ie7.min.css">
+		<![endif]-->
+	</head>
+	<body>
+		<div class="container">
+		
+			<div class="page-header">
+				<h1>Yammer - File Manager</h1>
+				<p>This tool helps you do download <!--and upload--> files from Yammer</p>
+			</div>
+			<div id="yammer-login" class="alert alert-info"></div>
+			<div class="container-fluid">
+				<div class="row-fluid">
+					<div class="span3">
+						<div class="well sidebar-nav">
+							<ul class="nav nav-list" id="navigation">
+							</ul>
+						</div>
+					</div>
+					<div class="span9">
+						<div class="well">
+							<div class="content">
+								<div id="groups">
+								</div>
+								<div id="files">
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="iframeHolder"></div>
+		<script src="http://code.jquery.com/jquery.js"></script>
+		<script src="assets/bootstrap/js/bootstrap.min.js"></script>
+		<script type="text/javascript" data-app-id="WeQACDefN95Vc6tJC8srA" src="https://assets.yammer.com/platform/yam.js"></script>
+		<script>
+			yam.connect.loginButton('#yammer-login', function (resp) { 
+				if (resp.authResponse) { 
+					document.getElementById('yammer-login').innerHTML = 'Welcome to Yammer!'; 
+				} 
+			});
+			
+			yam.getLoginStatus(
+			  function(response) {
+			    if (response.authResponse) {
+			      console.log("logged in");
+			      yam.request({
+			        url: "https://www.yammer.com/api/v1/networks/current.json",
+			        method: "GET",
+			        success: function (networks) {
+					  displayAllNetworks(networks);
+			          console.dir(networks);
+			        },
+			        error: function (failure) {
+			          console.log(failure);
+					  alert("There was an error with the request.");
+			        }
+			      });
+			    }
+			    else {
+			      alert("not logged in")
+			    }
+			  }
+			);
+			
+			var getGroups = function(network, networkid){
+				$('#groups').html('<a href="#"><i class="icon-refresh icon-spin"></i> Loading groups for '+network+' network...</a>');
+				$('#files').html('');
+				yam.request({
+			        url: "https://www.yammer.com/api/v1/groups.json?mine=1",
+			        /*url: "https://www.yammer.com/api/v1/networks/" + networkid + "/groups.json?mine=1",     */
+			        method: "GET",
+			        success: function (groups) {
+					  displayAllgroups(groups);
+			          console.dir(groups);
+			        },
+			        error: function (failure) {
+			          console.log(failure);
+					  alert("There was an error with the request.");
+			        }
+			      });
+			};
+			
+			var getFiles = function(groupid){
+				$('#files').html('<a href="#"><i class="icon-refresh icon-spin"></i> Loading files ...</a>')
+				yam.request({
+			        url: "https://www.yammer.com/api/v1/uploaded_files/in_group/" + groupid + ".json",     
+			        method: "GET",
+			        success: function (files) {
+					  displayAllFiles(files);
+			          console.dir(files);
+			        },
+			        error: function (failure) {
+			          console.log(failure);
+					  alert("There was an error with the request.");
+			        }
+			      });
+			};
+			
+			var displayAllNetworks = function(data){
+				var _d = '<li class="nav-header">Your Networks</li>';
+				$.each(data, function() {
+				  _d += '<li><a href="#" onclick="getGroups(' + '\'' + this.permalink + '\','+ this.id + ')">'+this.name+'</a></li>';
+				});
+				$('#navigation').html(_d);
+				$('#groups').html('<i class="icon-circle-arrow-left"></i> Choose a network');
+			};
+			
+			var displayAllgroups = function(data){
+				var _d = '<div> Your groups</div>';
+				 	_d += '<ul>';
+				$.each(data, function() {
+				  _d += '<li><a href="#" onclick="getFiles('+this.id+')">'+this.full_name+'</a></li>';
+				});
+				_d += '</ul>';
+				$('#groups').html(_d);
+			};
+			
+			var displayAllFiles = function(data){
+				var _d = '<div class="alert alert-success"> All Files in this group</div>';
+				var _f = data.files;
+				
+				if(_f.length != 0){				
+				 	_d += '<ul>';
+					$.each(_f, function() {
+					  _d += '<li><input type="checkbox" name="fileN" value="' + this.download_url +'">  '+this.name+'</li>';
+					});
+					_d += '</ul>';
+					_d += '<br/><a href="#" onclick="downloadFiles()" class="btn btn-primary">Download</a>'
+				}else{
+					_d = '<div class="alert alert-error">No files are found in this group</div>';
+				}
+				$('#files').html(_d);
+			};
+			
+			var downloadFiles = function(){
+				var _f = document.getElementsByName('fileN');
+				var _holder = document.getElementById('iframeHolder');
+				/*remove old file downloads*/
+				while (_holder.firstChild) {
+				  _holder.removeChild(_holder.firstChild);
+				}
+				/*afresh*/
+				for(var i=0; i< _f.length; i++){
+					if(_f[i].checked){
+						console.log(_f[i].value);
+						var _iframeObj = document.createElement("iframe");
+						_iframeObj.src = _f[i].value;
+						_iframeObj.style.display = "none";
+						_holder.appendChild(_iframeObj);
+					}
+				}
+			};
+			
+		</script>
+	</body>
+</html>
